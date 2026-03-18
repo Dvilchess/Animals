@@ -5,7 +5,7 @@ Arquitectura CNN, compilación y entrenamiento.
 Basado en el notebook original: Animales_Final.ipynb
 """
 
-import tensorflow as tff
+import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
 
