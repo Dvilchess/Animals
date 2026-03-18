@@ -1,65 +1,54 @@
 """
 src/model.py
-Arquitectura CNN, compilación y entrenamiento.
-
-Basado en el notebook original: Animales_Final.ipynb
+Arquitectura con EfficientNetB0 (Transfer Learning)
 """
+"""se cambio el entrenamiento con imagenes locales para utilizar efficientnet"""
 
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+from tensorflow.keras import layers, models
+from tensorflow.keras.applications import EfficientNetB0
 
 
 def construir_modelo(input_shape, num_clases: int) -> tf.keras.Model:
-    """
-    CNN del notebook original:
-      - Conv2D(64) → MaxPool → Conv2D(64) → MaxPool → Flatten → Dense(64) → Dense(n_clases)
+    # Base preentrenada de Google (sin la última capa)
+    base = EfficientNetB0(
+        weights="imagenet",
+        include_top=False,
+        input_shape=input_shape,
+    )
+    base.trainable = False  # congelar pesos de EfficientNet
 
-    Args:
-        input_shape : forma de entrada, ej: (100, 100, 3)
-        num_clases  : cantidad de clases (10 animales)
+    # Tu clasificador encima
+    inputs = tf.keras.Input(shape=input_shape)
+    x = base(inputs, training=False)
+    x = layers.GlobalAveragePooling2D()(x)
+    x = layers.Dense(256, activation="relu")(x)
+    x = layers.Dropout(0.5)(x)
+    outputs = layers.Dense(num_clases, activation="softmax")(x)
 
-    Retorna:
-        modelo sin compilar
-    """
-    model = Sequential([
-        Conv2D(64, (3, 3), input_shape=input_shape, activation="relu"),
-        MaxPooling2D(pool_size=(2, 2)),
-        Conv2D(64, (3, 3), activation="relu"),
-        MaxPooling2D(pool_size=(2, 2)),
-        Flatten(),
-        Dense(64, activation="relu"),
-        Dense(num_clases, activation="softmax"),
-    ])
-    return model
+    return tf.keras.Model(inputs, outputs)
 
 
 def compilar_modelo(model: tf.keras.Model) -> tf.keras.Model:
-    """
-    Compilación del notebook original:
-      - Optimizador : Adam
-      - Loss        : sparse_categorical_crossentropy
-      - Métrica     : accuracy
-    """
     model.compile(
-        optimizer="adam",
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
         loss="sparse_categorical_crossentropy",
         metrics=["accuracy"],
     )
     return model
 
 
-def entrenar(model, X_train, y_train, X_test, y_test, epochs: int = 10):
-    """
-    Entrena el modelo tal como en el notebook original (10 épocas).
+def entrenar(model, train_gen, val_gen, epochs: int = 10):
+    from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
-    Retorna:
-        history : objeto con las curvas de loss y accuracy
-    """
-    history = model.fit(
-        X_train,
-        y_train,
+    callbacks = [
+        EarlyStopping(monitor="val_accuracy", patience=5, restore_best_weights=True),
+        ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=3),
+    ]
+
+    return model.fit(
+        train_gen,
+        validation_data=val_gen,
         epochs=epochs,
-        validation_data=(X_test, y_test),
+        callbacks=callbacks,
     )
-    return history

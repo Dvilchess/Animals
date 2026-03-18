@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-IMG_SIZE = (100, 100)
+IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 
 

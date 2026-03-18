@@ -25,7 +25,7 @@ def main(data_dir: str = "data/raw", epochs: int = 10):
     # 2. Construir modelo
     print("\n🧠 Construyendo modelo CNN...")
     model = construir_modelo(
-        input_shape=(100, 100, 3),
+        input_shape=(224, 224, 3),
         num_clases=len(categories),
     )
     model = compilar_modelo(model)
